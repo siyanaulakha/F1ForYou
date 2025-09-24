@@ -1,0 +1,6 @@
+[
+  { "id": 1, "name": "Max Verstappen", "team": "Red Bull Racing", "nationality": "Dutch", "championships": 3 },
+  { "id": 2, "name": "Lewis Hamilton", "team": "Mercedes", "nationality": "British", "championships": 7 },
+  { "id": 3, "name": "Charles Leclerc", "team": "Ferrari", "nationality": "Monegasque", "championships": 0 },
+  { "id": 4, "name": "Lando Norris", "team": "McLaren", "nationality": "British", "championships": 0 }
+]

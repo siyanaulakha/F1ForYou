@@ -1,0 +1,14 @@
+{
+  "slug": "monza",
+  "name": "Monza",
+  "location": "Monza",
+  "country": "Italy",
+  "length_km": 5.793,
+  "laps": 53,
+  "about": "High-speed cathedral with iconic Curva Grande and Parabolica.",
+  "youtubeLapId": "dQw4w9WgXcQ",
+  "famousRaces": [
+    { "year": 1971, "note": "Closest finish in F1 history" },
+    { "year": 2020, "note": "Shock win and unforgettable podium" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "year": 2024,
+  "name": "2024 Formula 1 World Championship",
+  "driverWinner": "Max Verstappen",
+  "teamWinner": "Red Bull Racing",
+  "races": [
+    { "name": "Bahrain Grand Prix", "winner": "Max Verstappen", "team": "Red Bull Racing" },
+    { "name": "Saudi Arabian Grand Prix", "winner": "Max Verstappen", "team": "Red Bull Racing" },
+    { "name": "Australian Grand Prix", "winner": "Carlos Sainz", "team": "Ferrari" }
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "name": "Red Bull Racing",
+    "base": "Milton Keynes, UK",
+    "teamPrincipal": "Christian Horner",
+    "car": "RB20"
+  },
+  {
+    "id": 2,
+    "name": "Mercedes",
+    "base": "Brackley, UK",
+    "teamPrincipal": "Toto Wolff",
+    "car": "W15"
+  },
+  {
+    "id": 3,
+    "name": "Ferrari",
+    "base": "Maranello, Italy",
+    "teamPrincipal": "Frédéric Vasseur",
+    "car": "SF-24"
+  },
+  {
+    "id": 4,
+    "name": "McLaren",
+    "base": "Woking, UK",
+    "teamPrincipal": "Andrea Stella",
+    "car": "MCL38"
+  }
+]

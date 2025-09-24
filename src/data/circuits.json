@@ -1,0 +1,23 @@
+[
+  {
+    "slug": "monza",
+    "name": "Monza",
+    "location": "Monza",
+    "country": "Italy",
+    "short": "Temple of Speed. Long straights, low downforce."
+  },
+  {
+    "slug": "monaco",
+    "name": "Circuit de Monaco",
+    "location": "Monte Carlo",
+    "country": "Monaco",
+    "short": "Tight, twisty, unforgiving street circuit."
+  },
+  {
+    "slug": "silverstone",
+    "name": "Silverstone Circuit",
+    "location": "Silverstone",
+    "country": "United Kingdom",
+    "short": "Fast, flowing, and historic—home of British GP."
+  }
+]

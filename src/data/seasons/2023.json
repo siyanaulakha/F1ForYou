@@ -1,0 +1,11 @@
+{
+  "year": 2023,
+  "name": "2023 Formula 1 World Championship",
+  "driverWinner": "Max Verstappen",
+  "teamWinner": "Red Bull Racing",
+  "races": [
+    { "name": "Abu Dhabi Grand Prix", "winner": "Max Verstappen", "team": "Red Bull Racing" },
+    { "name": "Las Vegas Grand Prix", "winner": "Max Verstappen", "team": "Red Bull Racing" },
+    { "name": "Brazilian Grand Prix", "winner": "Max Verstappen", "team": "Red Bull Racing" }
+  ]
+}
