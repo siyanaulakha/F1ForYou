@@ -10,11 +10,11 @@ export default function CircuitsPage() {
           <div className="col-md-6 col-lg-4" key={c.slug}>
             <div className="card f1-card h-100">
               <div className="card-body">
-                <h5 className="card-title">{c.name}</h5>
+                <h5 className="card-title  f1-title-light">{c.name}</h5>
                 <div className="small text-secondary mb-2">
                   {c.location}, {c.country}
                 </div>
-                <p className="card-text mb-3">{c.short || "—"}</p>
+                <p className="card-text mb-3  f1-title-light">{c.short || "—"}</p>
                 <Link to={`/circuits/${c.slug}`} className="btn btn-outline-light btn-sm">
                   Open Circuit
                 </Link>

@@ -22,7 +22,7 @@ export default function SeasonsPage() {
           <div className="col-md-6 col-lg-4" key={s.year}>
             <div className="card f1-card h-100">
               <div className="card-body">
-                <h5 className="card-title">{s.name}</h5>
+                <h5 className="card-title  f1-title-light">{s.name}</h5>
                 <div className="small text-secondary mb-2">
                   Driver: <strong>{s.driverWinner}</strong><br/>
                   Constructor: <strong>{s.teamWinner}</strong>

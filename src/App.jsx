@@ -9,6 +9,8 @@ import TeamsPage from "./pages/TeamsPage"
 import Circuits from "./pages/Circuits"
 import CircuitDetails from "./pages/CircuitsDetails.jsx"
 import SeasonDetailPage from "./pages/seasons/SeasonDetailPage.jsx";
+import ContactUs from "./pages/ContactUs.jsx";
+
 export default function App() {
   return (
     <div className="app d-flex flex-column min-vh-100">
@@ -22,6 +24,7 @@ export default function App() {
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/circuits" element={<Circuits />} />
           <Route path="/circuits/:slug" element={<CircuitDetails />} />
+          <Route path="/contact" element={<ContactUs />} />
         </Routes>
       </main>
       <Footer />

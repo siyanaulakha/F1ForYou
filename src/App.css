@@ -52,5 +52,15 @@ a { text-decoration: none; }
 }
 .f1-embed iframe { border: 0; }
 
+.f1-title-light {
+  color: #f5f5f7;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.f1-text-light {
+  color: #fafaff;
+}
+
 .navbar-brand { color: var(--f1-red) !important; }
 .nav-link.active { color: var(--f1-red) !important; }

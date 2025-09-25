@@ -22,6 +22,7 @@ export default function Navbar() {
             <li className="nav-item"><NavLink className="nav-link" to="/drivers">Drivers</NavLink></li>
             <li className="nav-item"><NavLink className="nav-link" to="/teams">Teams</NavLink></li>
             <li className="nav-item"><NavLink className="nav-link" to="/circuits">Circuits</NavLink></li>
+            <li className="nav-item"><NavLink className="nav-link" to="/contact">Contact Us</NavLink></li>
           </ul>
         </div>
       </div>
