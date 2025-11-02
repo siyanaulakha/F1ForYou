@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { MongoClient } from 'mongodb';
+import axios from 'axios';
 
 const app = express();
 app.use(cors());
@@ -206,6 +207,102 @@ app.get('/api/seasons/:year/standings-history', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+app.get('/api/drivers', async (req, res) => {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+
+    // 1. Find all races in the latest season you have (2024)
+    const latestSeason = 2024;
+    const racesLatest = await db.collection('races').find({ year: latestSeason }).toArray();
+    const raceIdsLatest = racesLatest.map(race => race.raceId);
+
+    // 2. Find all drivers who participated in 2024
+    const resultsLatest = await db.collection('results').find({ raceId: { $in: raceIdsLatest } }).toArray();
+    const currentDriverIds = [...new Set(resultsLatest.map(r => r.driverId))];
+
+    // 3. Get career data for only these drivers (no year/raceId filter after here!)
+    const drivers = await db.collection('drivers').find({ driverId: { $in: currentDriverIds } }).toArray();
+
+    // Get all data (career-long) for these drivers
+    const [allResults, allQual, allDriverStandings, allConstructors, allRaces] = await Promise.all([
+      db.collection('results').find({ driverId: { $in: currentDriverIds } }).toArray(),
+      db.collection('qualifying').find({ driverId: { $in: currentDriverIds } }).toArray(),
+      db.collection('driver_standings').find({ driverId: { $in: currentDriverIds } }).toArray(),
+      db.collection('constructors').find({}).toArray(),
+      db.collection('races').find({}).toArray()
+    ]);
+
+    // Prepare mapping raceId -> year
+    const raceIdToYear = {};
+    allRaces.forEach(r => { raceIdToYear[r.raceId] = r.year; });
+
+    const driverData = drivers.map(driver => {
+      const dResults = allResults.filter(r => r.driverId === driver.driverId);
+      const dQual = allQual.filter(q => q.driverId === driver.driverId);
+
+      // Races participated
+      const racesCount = new Set(dResults.map(r => r.raceId)).size;
+      // Wins
+      const wins = dResults.filter(r => r.positionOrder === 1).length;
+      // Podiums
+      const podiums = dResults.filter(r => [1,2,3].includes(r.positionOrder)).length;
+      // Poles
+      const poles = dQual.filter(q => q.position === 1).length;
+      // Teams across career
+      const teamIds = [...new Set(dResults.map(r => r.constructorId))];
+      const teams = teamIds.map(tid => {
+        const t = allConstructors.find(c => c.constructorId === tid);
+        return t ? t.name : null;
+      }).filter(Boolean);
+
+      // Championships: count # of seasons where driver was P1 in standings at last race of season
+      const seasons = [...new Set(dResults.map(r => raceIdToYear[r.raceId]).filter(Boolean))];
+      let championships = 0;
+      for (const season of seasons) {
+        const seasonRaces = allRaces.filter(r => r.year === season).sort((a, b) => b.round - a.round);
+        if (seasonRaces.length === 0) continue;
+        const lastRaceId = seasonRaces[0].raceId;
+        const championStanding = allDriverStandings.find(s => s.raceId === lastRaceId && s.driverId === driver.driverId && s.position === 1);
+        if (championStanding) championships += 1;
+      }
+
+      // Career points (last known in standings)
+      const latestStanding = allDriverStandings
+        .filter(s => s.driverId === driver.driverId)
+        .sort((a, b) => b.raceId - a.raceId)[0];
+      const careerPoints = latestStanding ? latestStanding.points : dResults.reduce((sum, r) => sum + (r.points || 0), 0);
+
+      const seasonsList = [...new Set(dResults.map(r => raceIdToYear[r.raceId]).filter(Boolean))].sort();
+
+      return {
+        id: driver.driverId,
+        name: `${driver.forename} ${driver.surname}`,
+        code: driver.code,
+        dob: driver.dob,
+        nationality: driver.nationality,
+        races: racesCount,
+        wins,
+        podiums,
+        poles,
+        championships,
+        teams,
+        points: careerPoints,
+        seasons: seasonsList, 
+        number: driver.number
+      };
+    });
+
+    res.json(driverData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    await client.close();
+  }
+});
+
 
 
 const PORT = 3001;

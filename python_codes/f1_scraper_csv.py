@@ -2,13 +2,11 @@ import os
 import pandas as pd
 from pymongo import MongoClient
 
-# MongoDB setup
 mongo_uri = "mongodb://localhost:27017/"
 db_name = "f1db"
 client = MongoClient(mongo_uri)
 db = client[db_name]
 
-# Ensure working in script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 def load_csv(fname):
@@ -17,24 +15,46 @@ def load_csv(fname):
     return pd.read_csv(path)
 
 def upload_csv(filtered_df, collection_name):
-    db[collection_name].delete_many({})  # Optional: Clear out old records
+    db[collection_name].delete_many({})
     records = filtered_df.to_dict(orient='records')
     if records:
         db[collection_name].insert_many(records)
     print(f"Uploaded {len(records)} records to '{collection_name}'")
 
-# 1. Filter races (for year 2020-2024)
+# 1. Load key CSVs
 races = load_csv("races.csv")
-filtered_races = races[races['year'].between(2020, 2024)]
+results = load_csv("results.csv")
+drivers = load_csv("drivers.csv")
+
+# 2. Identify current drivers (those in 2024 results)
+current_year = 2024
+races_2024 = races[races['year'] == current_year]
+race_ids_2024 = set(races_2024['raceId'])
+results_2024 = results[results['raceId'].isin(race_ids_2024)]
+current_driver_ids = set(results_2024['driverId'])
+
+# 3. For each current driver, find earliest year in results/races
+driver_earliest_year = {}
+for driver_id in current_driver_ids:
+    driver_races = results[results['driverId'] == driver_id]
+    if not driver_races.empty:
+        race_years = races.set_index('raceId').loc[driver_races['raceId']]['year']
+        rookie_year = race_years.min()
+        driver_earliest_year[driver_id] = rookie_year
+
+# 4. Keep data since the earliest rookie year
+min_rookie_year = min(driver_earliest_year.values())
+print(f"Earliest 'rookie year' among current drivers: {min_rookie_year}")
+
+# 5. Filter races, seasons, and event tables
+filtered_races = races[races['year'] >= min_rookie_year]
 race_ids = set(filtered_races['raceId'])
 upload_csv(filtered_races, 'races')
 
-# 2. Filter seasons
 seasons = load_csv("seasons.csv")
-filtered_seasons = seasons[seasons['year'].between(2020, 2024)]
+filtered_seasons = seasons[seasons['year'] >= min_rookie_year]
 upload_csv(filtered_seasons, 'seasons')
 
-# 3. Event tables filtered by raceId (only events for filtered races)
 event_files = [
     ("results.csv", "results"),
     ("lap_times.csv", "lap_times"),
@@ -52,9 +72,8 @@ for fname, cname in event_files:
         filt_df = df[df['raceId'].isin(race_ids)]
         upload_csv(filt_df, cname)
     else:
-        upload_csv(df, cname)  # In case a file is not linked by raceId
+        upload_csv(df, cname)
 
-# 4. Reference tables uploaded in full (needed for relations)
 reference_files = [
     ("drivers.csv", "drivers"),
     ("constructors.csv", "constructors"),
