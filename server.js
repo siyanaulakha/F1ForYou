@@ -303,6 +303,81 @@ app.get('/api/drivers', async (req, res) => {
   }
 });
 
+app.get('/api/constructors', async (req, res) => {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+
+    // Get all races and determine the latest season
+    const allRaces = await db.collection('races').find({}).toArray();
+    if (allRaces.length === 0) {
+      return res.json([]);
+    }
+    const latestSeason = Math.max(...allRaces.map(r => r.year));
+    const latestRaceIds = allRaces.filter(r => r.year === latestSeason).map(r => r.raceId);
+
+    // Get all relevant collections
+    const [constructors, allConstructorResults, allConstructorStandings, allDrivers, latestResults] = await Promise.all([
+      db.collection('constructors').find({}).toArray(),
+      db.collection('constructor_results').find({}).toArray(),
+      db.collection('constructor_standings').find({}).toArray(),
+      db.collection('drivers').find({}).toArray(),
+      db.collection('results').find({ raceId: { $in: latestRaceIds } }).toArray()
+    ]);
+
+    // For raceId -> year mapping
+    const raceIdToYear = {};
+    allRaces.forEach(r => { raceIdToYear[r.raceId] = r.year; });
+
+    const constructorData = constructors.map(constructor => {
+      const cResults = allConstructorResults.filter(r => r.constructorId === constructor.constructorId);
+      const seasons = [...new Set(cResults.map(r => raceIdToYear[r.raceId]).filter(Boolean))];
+
+      // Wins and points (total)
+      const wins = cResults.filter(r => r.positionOrder === 1).length;
+      const points = cResults.reduce((sum, r) => sum + (r.points || 0), 0);
+
+      // Championships: count #seasons where team was P1 in last race of the season
+      let championships = 0;
+      seasons.forEach(season => {
+        const seasonRaces = allRaces.filter(r => r.year === season).sort((a, b) => b.round - a.round);
+        if (!seasonRaces.length) return;
+        const lastRaceId = seasonRaces[0].raceId;
+        const champStanding = allConstructorStandings.find(s =>
+          s.raceId === lastRaceId && s.constructorId === constructor.constructorId && s.position === 1
+        );
+        if (champStanding) championships++;
+      });
+
+      // DRIVERS: Only current drivers (raced for this team in latest season)
+      const currentDriverIdsSet = new Set(
+        latestResults
+          .filter(r => r.constructorId === constructor.constructorId)
+          .map(r => r.driverId)
+      );
+      const drivers = allDrivers
+        .filter(d => currentDriverIdsSet.has(d.driverId))
+        .map(d => `${d.forename} ${d.surname}`);
+
+      return {
+        id: constructor.constructorId,
+        name: constructor.name,
+        nationality: constructor.nationality,
+        championships,
+        wins,
+        points,
+        drivers,
+      };
+    });
+
+    res.json(constructorData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    await client.close();
+  }
+});
 
 
 const PORT = 3001;
