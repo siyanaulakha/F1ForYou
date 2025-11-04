@@ -379,6 +379,115 @@ app.get('/api/constructors', async (req, res) => {
   }
 });
 
+app.get('/api/circuits', async (req, res) => {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const circuits = await db.collection('circuits').find({}).toArray();
+    res.json(circuits); // If collection exists, send as array
+  } catch (err) {
+    console.error("Circuits API error:", err); // Watch your terminal for this log!
+    res.status(500).json({ error: 'Could not fetch circuits', details: err.message });
+  } finally {
+    await client.close();
+  }
+});
+
+
+app.get('/api/circuits/:circuitId/details', async (req, res) => {
+  const circuitId = Number(req.params.circuitId); // Make sure this matches the type in your DB
+
+  function toSeconds(val) {
+    if (typeof val === 'string') {
+      const m = val.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)/);
+      if (m) {
+        const minutes = parseInt(m[1] || '0', 10);
+        const seconds = parseFloat(m[2]);
+        return minutes * 60 + seconds;
+      }
+      const f = parseFloat(val);
+      return isNaN(f) ? null : f;
+    }
+    if (typeof val === 'number') {
+      return val;
+    }
+    return null;
+  }
+
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+
+    const circuit = await db.collection('circuits').findOne({ circuitId: circuitId });
+
+    // Get all races at this circuit
+    const races = await db.collection('races').find({ circuitId: circuitId }).toArray();
+    const raceIds = races.map(r => r.raceId);
+
+    // Gather lap_times for these races
+    const lapTimesRaw = await db.collection('lap_times').find({ raceId: { $in: raceIds } }).toArray();
+    const lapTimeSecs = lapTimesRaw.map(lt => toSeconds(lt.lapTime)).filter(n => n != null);
+
+    // Calculate avg and fastest lap
+    const avgLapTime = lapTimeSecs.length ? lapTimeSecs.reduce((a, b) => a + b, 0) / lapTimeSecs.length : null;
+    const fastestLapTime = lapTimeSecs.length ? Math.min(...lapTimeSecs) : null;
+    let fastestLapDriver = null;
+    if (fastestLapTime !== null) {
+      const fastestLap = lapTimesRaw.find(lt => toSeconds(lt.lapTime) === fastestLapTime);
+      if (fastestLap) {
+        const driver = await db.collection('drivers').findOne({ driverId: fastestLap.driverId });
+        fastestLapDriver = driver ? `${driver.forename} ${driver.surname}` : null;
+      }
+    }
+
+    // Most wins at circuit
+    const winsResults = await db.collection('results').find({ raceId: { $in: raceIds }, position: 1 }).toArray();
+    const winCounts = {};
+    winsResults.forEach(r => {
+      winCounts[r.driverId] = (winCounts[r.driverId] || 0) + 1;
+    });
+    let mostWinsDriver = null;
+    let mostWinsCount = 0;
+    for (const [driverId, count] of Object.entries(winCounts)) {
+      if (count > mostWinsCount) {
+        mostWinsCount = count;
+        mostWinsDriver = driverId;
+      }
+    }
+    let mostWinsDriverName = null;
+    if (mostWinsDriver) {
+      const driver = await db.collection('drivers').findOne({ driverId: Number(mostWinsDriver) });
+      mostWinsDriverName = driver ? `${driver.forename} ${driver.surname}` : null;
+    }
+
+    res.json({
+      circuit: {
+        circuitId: circuit?.circuitId ?? circuitId,
+        name: circuit?.name ?? "Unknown",
+        location: circuit?.location,
+        country: circuit?.country,
+        lat: circuit?.lat,
+        lng: circuit?.lng,
+        alt: circuit?.alt,
+        url: circuit?.url
+      },
+      stats: {
+        averageLapTime: avgLapTime,
+        fastestLap: fastestLapTime,
+        fastestDriver: fastestLapDriver,
+        mostWinsDriver: mostWinsDriverName,
+        mostWinsCount: mostWinsCount,
+        totalRaces: races.length
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    await client.close();
+  }
+});
+
 
 const PORT = 3001;
 app.listen(PORT, () => {

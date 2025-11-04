@@ -6,7 +6,7 @@ import HomePage from "./pages/HomePage";
 import Seasons from "./pages/Seasons";
 import DriversPage from "./pages/DriversPage";
 import TeamsPage from "./pages/TeamsPage"
-import Circuits from "./pages/Circuits"
+import Circuits from "./pages/Circuits.jsx"
 import CircuitDetails from "./pages/CircuitsDetails.jsx"
 import SeasonDetailPage from "./pages/seasons/SeasonDetailPage.jsx";
 import ContactUs from "./pages/ContactUs.jsx";

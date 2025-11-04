@@ -1,66 +1,129 @@
-import { useParams } from "react-router-dom";
-import circuitsList from "../data/circuits.json";
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 
-const circuitFiles = import.meta.glob("/src/data/circuits/*.json", { eager: true });
+export default function CircuitDetailsPage() {
+  const { circuitId } = useParams();
+  const [circuit, setCircuit] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  useEffect(() => {
+    fetch(`http://localhost:3001/api/circuits/${circuitId}/details`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        setCircuit(data.circuit || null);
+        setStats(data.stats || null);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [circuitId]);
 
-function findCircuit(slug) {
-  for (const mod of Object.values(circuitFiles)) {
-    if (mod.slug === slug) return mod;   // prefer dedicated file
+  if (loading) {
+    return (
+      <div className="container py-4">
+        <h2>Circuit Details</h2>
+        <p>Loading details for circuit {circuitId}...</p>
+      </div>
+    );
   }
-  return circuitsList.find(c => c.slug === slug) || null;
-}
 
-export default function CircuitDetailPage() {
-  const { slug } = useParams();
-  const circuit = findCircuit(slug);
+  if (error) {
+    return (
+      <div className="container py-4">
+        <h2>Circuit Details</h2>
+        <div className="alert alert-danger" role="alert">
+          Error loading circuit details: {error}
+        </div>
+        <Link to="/circuits" className="btn btn-secondary mt-3">Back to Circuits</Link>
+      </div>
+    );
+  }
 
   if (!circuit) {
     return (
       <div className="container py-4">
-        <h2>Circuit</h2>
-        <div className="alert alert-warning mt-3">
-          No circuit data found. Create <code>src/data/circuits/{slug}.json</code> or add it to <code>circuits.json</code>.
-        </div>
+        <h2>Circuit Details</h2>
+        <p>Circuit not found.</p>
+        <Link to="/circuits" className="btn btn-secondary mt-3">Back to Circuits</Link>
       </div>
     );
   }
 
   return (
     <div className="container py-4">
-      <h2 className="mb-1">{circuit.name}</h2>
-      <div className="text-secondary mb-3">
-        {circuit.location}, {circuit.country}
-        {circuit.length_km && <> • {circuit.length_km} km</>}
-        {circuit.laps && <> • {circuit.laps} laps</>}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2 className="mb-0">{circuit.name}</h2>
+        <Link to="/circuits" className="btn btn-outline-secondary btn-sm">
+          Back to Circuits
+        </Link>
       </div>
 
-      {circuit.about && <p className="lead">{circuit.about}</p>}
-
-      {circuit.youtubeLapId && (
-        <>
-          <h5>Onboard Lap</h5>
-          <div className="ratio ratio-16x9 rounded-3 overflow-hidden f1-embed mb-3">
-            <iframe
-              src={`https://www.youtube.com/embed/${circuit.youtubeLapId}`}
-              title={`${circuit.name} Onboard Lap`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+      <div className="row g-3 mb-4">
+        <div className="col-md-6">
+          <div className="card bg-dark text-light border-light p-3 h-100">
+            <div className="mb-2 text-uppercase" style={{ fontSize: "0.8rem" }}>
+              Location
+            </div>
+            <div style={{ fontSize: "1.1rem" }}>
+              {circuit.location}, {circuit.country}
+            </div>
+            {circuit.lat != null && circuit.lng != null && (
+              <div className="text-muted mt-2">
+                Coordinates: {circuit.lat}, {circuit.lng}
+              </div>
+            )}
+            {circuit.url && (
+              <a href={circuit.url} target="_blank" rel="noreferrer" className="btn btn-outline-light btn-sm mt-2">
+                Wikipedia
+              </a>
+            )}
           </div>
-        </>
-      )}
+        </div>
 
-      {circuit.famousRaces?.length > 0 && (
-        <>
-          <h5>Famous Races</h5>
-          <ul>
-            {circuit.famousRaces.map((r, i) => (
-              <li key={i}>{r.year}: {r.note}</li>
-            ))}
-          </ul>
-        </>
-      )}
+        <div className="col-md-6">
+          <div className="card bg-dark text-light border-light p-3 h-100">
+            <div className="mb-2 text-uppercase" style={{ fontSize: "0.8rem" }}>
+              Overview
+            </div>
+            <div className="lead">
+              {stats ? (
+                <>
+                  <div className="mb-2">
+                    <strong>Average Lap Time:</strong>{" "}
+                    {stats.averageLapTime != null ? `${stats.averageLapTime.toFixed(2)} s` : "—"}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Fastest Lap:</strong>{" "}
+                    {stats.fastestLap != null ? `${stats.fastestLap.toFixed(2)} s` : "—"}{" "}
+                    {stats.fastestDriver ? `by ${stats.fastestDriver}` : ""}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Most Wins:</strong>{" "}
+                    {stats.mostWinsDriver ? `${stats.mostWinsDriver} (${stats.mostWins} wins)` : "—"}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Total Races:</strong> {stats.totalRaces ?? "—"}
+                  </div>
+                </>
+              ) : (
+                <div>No statistics available for this circuit yet.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Optional: add a drivers or top performances section here later */}
+
     </div>
   );
 }
