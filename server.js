@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import { MongoClient } from 'mongodb';
 import axios from 'axios';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
@@ -394,98 +400,63 @@ app.get('/api/circuits', async (req, res) => {
 });
 
 
-app.get('/api/circuits/:circuitId/details', async (req, res) => {
-  const circuitId = Number(req.params.circuitId); // Make sure this matches the type in your DB
+// Connect MongoDB client once outside routes (not shown here, do this in your main server file)
+let db;
+(async () => {
+  await client.connect();
+  db = client.db(dbName);
+  console.log("Connected to MongoDB");
+})();
 
-  function toSeconds(val) {
-    if (typeof val === 'string') {
-      const m = val.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)/);
-      if (m) {
-        const minutes = parseInt(m[1] || '0', 10);
-        const seconds = parseFloat(m[2]);
-        return minutes * 60 + seconds;
-      }
-      const f = parseFloat(val);
-      return isNaN(f) ? null : f;
-    }
-    if (typeof val === 'number') {
-      return val;
-    }
-    return null;
+let circuitData = null;
+
+// Load the JSON file once at server startup
+const jsonFilePath = path.join(__dirname, 'enriched_circuits.json');
+try {
+  const rawData = fs.readFileSync(jsonFilePath, 'utf-8');
+  circuitData = JSON.parse(rawData);
+  console.log('Loaded enriched_circuits.json data');
+} catch (err) {
+  console.error('Failed to load enriched_circuits.json:', err);
+}
+
+// API endpoint
+app.get('/api/circuits/:circuitId/details', (req, res) => {
+  if (!circuitData) {
+    return res.status(500).json({ error: 'Circuit data not loaded' });
   }
 
-  try {
-    await client.connect();
-    const db = client.db(dbName);
+  const circuitId = Number(req.params.circuitId);
+  const circuit = circuitData[circuitId];
 
-    const circuit = await db.collection('circuits').findOne({ circuitId: circuitId });
-
-    // Get all races at this circuit
-    const races = await db.collection('races').find({ circuitId: circuitId }).toArray();
-    const raceIds = races.map(r => r.raceId);
-
-    // Gather lap_times for these races
-    const lapTimesRaw = await db.collection('lap_times').find({ raceId: { $in: raceIds } }).toArray();
-    const lapTimeSecs = lapTimesRaw.map(lt => toSeconds(lt.lapTime)).filter(n => n != null);
-
-    // Calculate avg and fastest lap
-    const avgLapTime = lapTimeSecs.length ? lapTimeSecs.reduce((a, b) => a + b, 0) / lapTimeSecs.length : null;
-    const fastestLapTime = lapTimeSecs.length ? Math.min(...lapTimeSecs) : null;
-    let fastestLapDriver = null;
-    if (fastestLapTime !== null) {
-      const fastestLap = lapTimesRaw.find(lt => toSeconds(lt.lapTime) === fastestLapTime);
-      if (fastestLap) {
-        const driver = await db.collection('drivers').findOne({ driverId: fastestLap.driverId });
-        fastestLapDriver = driver ? `${driver.forename} ${driver.surname}` : null;
-      }
-    }
-
-    // Most wins at circuit
-    const winsResults = await db.collection('results').find({ raceId: { $in: raceIds }, position: 1 }).toArray();
-    const winCounts = {};
-    winsResults.forEach(r => {
-      winCounts[r.driverId] = (winCounts[r.driverId] || 0) + 1;
-    });
-    let mostWinsDriver = null;
-    let mostWinsCount = 0;
-    for (const [driverId, count] of Object.entries(winCounts)) {
-      if (count > mostWinsCount) {
-        mostWinsCount = count;
-        mostWinsDriver = driverId;
-      }
-    }
-    let mostWinsDriverName = null;
-    if (mostWinsDriver) {
-      const driver = await db.collection('drivers').findOne({ driverId: Number(mostWinsDriver) });
-      mostWinsDriverName = driver ? `${driver.forename} ${driver.surname}` : null;
-    }
-
-    res.json({
-      circuit: {
-        circuitId: circuit?.circuitId ?? circuitId,
-        name: circuit?.name ?? "Unknown",
-        location: circuit?.location,
-        country: circuit?.country,
-        lat: circuit?.lat,
-        lng: circuit?.lng,
-        alt: circuit?.alt,
-        url: circuit?.url
-      },
-      stats: {
-        averageLapTime: avgLapTime,
-        fastestLap: fastestLapTime,
-        fastestDriver: fastestLapDriver,
-        mostWinsDriver: mostWinsDriverName,
-        mostWinsCount: mostWinsCount,
-        totalRaces: races.length
-      }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  } finally {
-    await client.close();
+  if (!circuit) {
+    return res.status(404).json({ error: 'Circuit not found' });
   }
+
+  // Construct the response matching your frontend expectations
+  const response = {
+    circuit: {
+      circuitId: circuit.circuitId,
+      name: circuit.name,
+      location: circuit.location,
+      country: circuit.country,
+      lat: circuit.lat,
+      lng: circuit.lng,
+      alt: circuit.alt,
+      url: circuit.url,
+    },
+    stats: {
+      num_races: circuit.num_races,
+      most_wins_driver: circuit.most_wins_driver,
+      driver_win_count: circuit.driver_win_count,
+      fastest_lap: circuit.fastest_lap,
+      fastest_lap_driver: circuit.fastest_lap_driver,
+      most_successful_team_id: circuit.most_successful_team_id,
+      team_win_count: circuit.team_win_count,
+    }
+  };
+
+  res.json(response);
 });
 
 

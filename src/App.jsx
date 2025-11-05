@@ -23,7 +23,7 @@ export default function App() {
           <Route path="/drivers" element={<DriversPage />} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/circuits" element={<Circuits />} />
-          <Route path="/circuits/:slug" element={<CircuitDetails />} />
+          <Route path="/circuits/:circuitId" element={<CircuitDetails />} />
           <Route path="/contact" element={<ContactUs />} />
         </Routes>
       </main>
