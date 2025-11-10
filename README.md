@@ -12,7 +12,6 @@ Seamlessly explore the sport’s legacy, compare statistics, and relive iconic G
 * 📅 *Season Explorer* – Navigate through every F1 season year by year, tracking how the sport has evolved.
 * 🏆 *Drivers & Teams Hub* – Get in-depth stats, compare rivalries, and see how legends were made.
 * 🏟️ *Circuit Profiles* – Explore the world’s most iconic race tracks, from Monaco’s streets to Monza’s straights.
-* 🎥 *Race Highlights* – Watch official YouTube highlights, recaps, and exclusive content without leaving the site.
 * 💻 *Modern & Responsive UI* – Built with React, Bootstrap, HTML5, and CSS3 for a sleek experience across devices.
 
 
